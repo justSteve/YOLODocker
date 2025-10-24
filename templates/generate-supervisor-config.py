@@ -39,9 +39,12 @@ def generate_supervisor_config(config_file, output_file):
     for service_name, service_config in config['services'].items():
         start_cmd = service_config.get('startCommand', '')
 
+        # Wrap command in sh -c to enable shell features (&&, |, etc.)
+        wrapped_cmd = f'sh -c "{start_cmd}"'
+
         lines.extend([
             f"[program:{service_name}]",
-            f"command={start_cmd}",
+            f"command={wrapped_cmd}",
             "autostart=true",
             "autorestart=true",
             "startretries=3",
