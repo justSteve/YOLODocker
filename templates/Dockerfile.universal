@@ -19,6 +19,10 @@ RUN apt-get update && apt-get install -y \
     supervisor \
     && rm -rf /var/lib/apt/lists/*
 
+# Create supervisor directories
+RUN mkdir -p /etc/supervisor/conf.d && \
+    mkdir -p /var/log/supervisor
+
 # Install Node.js (LTS)
 RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - && \
     apt-get install -y nodejs && \
@@ -33,6 +37,10 @@ RUN apt-get update && apt-get install -y \
 
 # Create working directory
 WORKDIR /workspace
+
+# Copy config generator script
+COPY templates/generate-supervisor-config.py /generate-supervisor-config.py
+RUN chmod +x /generate-supervisor-config.py
 
 # Copy container entrypoint script (will be created separately)
 COPY entrypoint.sh /entrypoint.sh

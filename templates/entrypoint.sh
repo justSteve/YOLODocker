@@ -40,8 +40,13 @@ if command -v go >/dev/null && [[ -f go.mod ]]; then
   go mod download || error "go mod download failed"
 fi
 
-info "Environment setup complete. Starting services..."
+# Create supervisor config from config4Docker.json
+info "Generating supervisor configuration..."
+python3 /generate-supervisor-config.py \
+  /workspace/config4Docker.json \
+  /etc/supervisor/conf.d/services.conf || error "Failed to generate supervisor config"
 
-# Services will be started by supervisor (supervisor.conf in /etc/supervisor/conf.d/)
-# Drop into interactive bash shell
-/bin/bash -i
+info "Starting services via supervisor..."
+
+# Start supervisord in foreground (takes over PID 1)
+exec supervisord -c /etc/supervisor/supervisord.conf
