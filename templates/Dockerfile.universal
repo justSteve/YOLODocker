@@ -35,7 +35,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /workspace
 
 # Copy container entrypoint script (will be created separately)
-COPY templates/entrypoint.sh /entrypoint.sh
+COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Default entrypoint

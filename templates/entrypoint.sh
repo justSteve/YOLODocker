@@ -20,6 +20,8 @@ if [[ ! -f /workspace/config4Docker.json ]]; then
   error "config4Docker.json not found in /workspace"
 fi
 
+cd /workspace || error "Failed to change to /workspace"
+
 info "Setting up development environment..."
 
 # Auto-install from manifest files
@@ -33,7 +35,7 @@ if [[ -f requirements.txt ]]; then
   pip install -q -r requirements.txt || error "pip install failed"
 fi
 
-if [[ -f go.mod ]]; then
+if command -v go >/dev/null && [[ -f go.mod ]]; then
   info "Downloading Go modules..."
   go mod download || error "go mod download failed"
 fi
