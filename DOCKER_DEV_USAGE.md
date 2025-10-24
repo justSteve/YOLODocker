@@ -414,8 +414,17 @@ Changes are merged back to your repo with a timestamped backup created first.
 
 For production deployment, use standard Docker practices and deployment tools.
 
+## Recent Updates & Fixes
+
+### Latest Improvements (October 24, 2025)
+
+- **Fixed container-id metadata corruption** - Diagnostic messages (`INFO:` lines) were being captured in the container-id file, preventing extraction from working. Fixed by redirecting all `info()` output to stderr.
+- **Improved container ID matching** - Container validation now uses `docker ps --no-trunc` to properly match full-length container IDs against stored metadata.
+- **Comprehensive documentation** - Added message2futureagent.md with architecture details, known issues, testing procedures, and debugging tips for future developers.
+
 ## See Also
 
+- **Developer Guide:** `message2futureagent.md` - Architecture, known issues, testing procedures, and debugging tips
 - **Design Document:** `docs/plans/2025-10-23-config-driven-multi-service-docker-design.md`
 - **Implementation Plan:** `docs/plans/2025-10-23-config-docker-implementation.md`
 - **Docker Documentation:** https://docs.docker.com/
