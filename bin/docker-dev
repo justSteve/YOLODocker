@@ -33,6 +33,7 @@ validate_repo_path() {
 source "$(dirname "${BASH_SOURCE[0]}")/lib/config.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/lib/docker-ops.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/lib/extraction.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/metadata.sh"
 
 # Main command dispatcher
 main() {
@@ -99,21 +100,23 @@ cmd_start() {
   info "Validating configuration..."
   validate_config "$config"
 
+  info "Initializing metadata..."
+  init_metadata "$repo_path"
+
   info "Building Docker image..."
   local image_name=$(generate_image_name)
   local dockerfile="$REPO_ROOT/templates/Dockerfile.universal"
 
   build_docker_image "$repo_path" "$dockerfile" "$image_name"
 
-  # Save image name to metadata
-  mkdir -p "$repo_path/$METADATA_DIR"
-  echo "$image_name" > "$repo_path/$METADATA_DIR/image-id"
+  # Save image metadata
+  save_image_metadata "$repo_path" "$image_name"
 
   info "Starting container..."
   local container_id=$(run_docker_container "$image_name" "$repo_path")
 
-  # Save container ID to metadata
-  echo "$container_id" > "$repo_path/$METADATA_DIR/container-id"
+  # Save container metadata
+  save_container_metadata "$repo_path" "$container_id" "$repo_path/config4Docker.json"
 
   info "Attaching to container shell..."
   attach_to_container "$container_id"
@@ -160,6 +163,9 @@ cmd_stop() {
 cmd_status() {
   local repo_path=$(validate_repo_path "${1:-.}")
 
+  show_metadata "$repo_path"
+
+  echo ""
   echo "=== Container Status ==="
   show_container_status
 
