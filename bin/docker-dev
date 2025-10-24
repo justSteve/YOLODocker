@@ -10,7 +10,10 @@ METADATA_DIR=".dockerdev"
 
 # Helper functions
 error() {
+  echo "" >&2
   echo "ERROR: $*" >&2
+  echo "" >&2
+  echo "Run './bin/docker-dev help' for usage information" >&2
   exit 1
 }
 
@@ -18,13 +21,60 @@ info() {
   echo "INFO: $*"
 }
 
+check_prerequisites() {
+  local missing=0
+
+  for cmd in docker jq rsync; do
+    if ! command -v "$cmd" &> /dev/null; then
+      echo "ERROR: Required tool not found: $cmd" >&2
+      case "$cmd" in
+        docker)
+          echo "  Install Docker from: https://docs.docker.com/get-docker/" >&2
+          ;;
+        jq)
+          echo "  Install with: apt-get install jq (or brew install jq on macOS)" >&2
+          ;;
+        rsync)
+          echo "  Install with: apt-get install rsync (or brew install rsync on macOS)" >&2
+          ;;
+      esac
+      missing=1
+    fi
+  done
+
+  if [[ $missing -eq 1 ]]; then
+    echo "" >&2
+    echo "Install missing tools and try again" >&2
+    echo "Run './bin/docker-dev help' for usage information" >&2
+    exit 1
+  fi
+}
+
 validate_repo_path() {
   local repo_path="${1:-.}"
   if [[ ! -d "$repo_path" ]]; then
-    error "Repository path does not exist: $repo_path"
+    error "Repository path does not exist: $repo_path
+
+Next steps:
+  - Verify the path exists: ls -la $repo_path
+  - Use absolute path instead of relative path
+  - Check for typos in path"
   fi
   if [[ ! -f "$repo_path/config4Docker.json" ]]; then
-    error "config4Docker.json not found in $repo_path"
+    error "config4Docker.json not found in $repo_path
+
+Next steps:
+  - Create config4Docker.json in repo root
+  - See DOCKER_DEV_USAGE.md for config examples
+  - Ensure you're in the correct directory"
+  fi
+  if [[ ! -w "$repo_path" ]]; then
+    error "Repository path is not writable: $repo_path
+
+Next steps:
+  - Check file permissions: ls -la $repo_path
+  - Fix permissions with: chmod u+w $repo_path
+  - Ensure you have write access to this directory"
   fi
   echo "$(cd "$repo_path" && pwd)"
 }
@@ -89,6 +139,8 @@ EOF
 }
 
 cmd_start() {
+  check_prerequisites
+
   local repo_path=$(validate_repo_path "${1:-.}")
 
   check_docker
@@ -131,14 +183,24 @@ cmd_extract() {
   local container_id_file="$repo_path/$METADATA_DIR/container-id"
 
   if [[ ! -f "$container_id_file" ]]; then
-    error "No running container found. Run './bin/docker-dev start' first."
+    error "No running container found. Run './bin/docker-dev start' first.
+
+Next steps:
+  - Start a container: ./bin/docker-dev start
+  - Check status: ./bin/docker-dev status
+  - Ensure you're in the correct directory"
   fi
 
   local container_id=$(cat "$container_id_file")
 
   # Verify container is still running
   if ! docker ps -q | grep -q "$container_id"; then
-    error "Container is not running: $container_id"
+    error "Container is not running: $container_id
+
+Next steps:
+  - Check container status: docker ps -a | grep $container_id
+  - Restart container: ./bin/docker-dev start
+  - View all containers: docker ps -a"
   fi
 
   extract_changes "$repo_path" "$container_id"

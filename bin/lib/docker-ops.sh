@@ -4,11 +4,23 @@
 # Check Docker availability
 check_docker() {
   if ! command -v docker &> /dev/null; then
-    error "Docker not found. Install Docker and ensure daemon is running."
+    error "Docker not found. Install Docker and ensure daemon is running.
+
+Next steps:
+  - Install Docker from: https://docs.docker.com/get-docker/
+  - On Linux: sudo apt-get install docker.io
+  - On macOS/Windows: Install Docker Desktop
+  - Verify installation: docker --version"
   fi
 
   if ! docker ps &>/dev/null; then
-    error "Docker daemon not responding. Check if Docker is running."
+    error "Docker daemon not responding. Check if Docker is running.
+
+Next steps:
+  - On Docker Desktop: Start the Docker Desktop application
+  - On Linux: sudo systemctl start docker
+  - Check status: docker ps
+  - Check permissions: sudo usermod -aG docker $USER (then log out/in)"
   fi
 }
 
@@ -38,7 +50,14 @@ build_docker_image() {
     info "Image built successfully: $image_name"
     echo "$image_name"
   else
-    error "Docker build failed. See $build_log for details"
+    error "Docker build failed. See $build_log for details
+
+Next steps:
+  - Review build log: cat $build_log
+  - Check Dockerfile syntax at: $dockerfile_path
+  - Ensure all dependencies are available
+  - Check for network connectivity issues
+  - Try building with: docker build -f $dockerfile_path -t test ."
   fi
 }
 
@@ -65,7 +84,13 @@ run_docker_container() {
     tail -f /dev/null)
 
   if [[ -z "$container_id" ]]; then
-    error "Failed to start container"
+    error "Failed to start container
+
+Next steps:
+  - Check Docker logs: docker logs $container_name
+  - Verify image exists: docker images | grep $image_name
+  - Check for port conflicts: docker ps
+  - Try running manually: docker run -it $image_name /bin/bash"
   fi
 
   info "Container started: $container_id"

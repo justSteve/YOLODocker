@@ -8,7 +8,12 @@ extract_changes() {
   local temp_extract_dir
 
   if [[ -z "$container_id" ]]; then
-    error "No container ID provided"
+    error "No container ID provided
+
+Next steps:
+  - Start a container first: ./bin/docker-dev start
+  - Check container status: ./bin/docker-dev status
+  - Ensure container is running: docker ps"
   fi
 
   info "Extracting changes from container: $container_id"
@@ -20,7 +25,13 @@ extract_changes() {
   # Copy entire workspace from container
   info "Copying workspace from container..."
   if ! docker cp "$container_id:/workspace/." "$temp_extract_dir/" 2>/dev/null; then
-    error "Failed to copy files from container"
+    error "Failed to copy files from container
+
+Next steps:
+  - Check if container is running: docker ps | grep $container_id
+  - Restart container if stopped: ./bin/docker-dev start
+  - Check container logs: docker logs $container_id
+  - Verify /workspace exists in container: docker exec $container_id ls -la /workspace"
   fi
 
   # Backup original repo
@@ -37,7 +48,13 @@ extract_changes() {
            --exclude='*.pyc' \
            --exclude='.venv' \
            --exclude='venv' \
-           "$temp_extract_dir/" "$repo_path/" || error "rsync merge failed"
+           "$temp_extract_dir/" "$repo_path/" || error "rsync merge failed
+
+Next steps:
+  - Check rsync is installed: rsync --version
+  - Verify write permissions on repo: ls -la $repo_path
+  - Check disk space: df -h
+  - Restore from backup if needed: cp -r ${repo_path}.backup.* $repo_path"
 
   info "Changes extracted successfully"
   info "Backup preserved at: $backup_dir"
