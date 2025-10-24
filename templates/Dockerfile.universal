@@ -1,0 +1,50 @@
+# Universal development environment for Node + Python projects
+# Supports single or multi-service configurations
+
+FROM ubuntu:22.04
+
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive \
+    CLAUDE_CODE_ACCEPT_PERMISSIONS=true \
+    CLAUDE_CODE_MODE=yolo
+
+# Install base utilities and system dependencies
+RUN apt-get update && apt-get install -y \
+    bash \
+    curl \
+    git \
+    ca-certificates \
+    build-essential \
+    rsync \
+    supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create supervisor directories
+RUN mkdir -p /etc/supervisor/conf.d && \
+    mkdir -p /var/log/supervisor
+
+# Install Node.js (LTS)
+RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Python with pip
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create working directory
+WORKDIR /workspace
+
+# Copy config generator script
+COPY templates/generate-supervisor-config.py /generate-supervisor-config.py
+RUN chmod +x /generate-supervisor-config.py
+
+# Copy container entrypoint script (will be created separately)
+COPY templates/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Default entrypoint
+ENTRYPOINT ["/entrypoint.sh"]
