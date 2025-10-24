@@ -43,10 +43,13 @@ build_docker_image() {
   mkdir -p "${repo_path}/.dockerdev"
 
   # Build with log capture
+  # Build context must be the buildDockers repo root (parent of templates/)
+  local build_context="$(dirname "$(dirname "$dockerfile_path")")"
+
   if docker build -f "$dockerfile_path" \
     -t "$image_name" \
     --build-arg BUILDKIT_INLINE_CACHE=1 \
-    "$repo_path" > "$build_log" 2>&1; then
+    "$build_context" > "$build_log" 2>&1; then
     info "Image built successfully: $image_name"
     echo "$image_name"
   else
