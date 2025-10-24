@@ -1,6 +1,9 @@
 # Docker development containers
 .dockerdev/
 
+# Git worktrees
+.worktrees/
+
 # Node
 node_modules/
 package-lock.json
