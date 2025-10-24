@@ -219,6 +219,7 @@ test_docker() {
 
   info "Docker daemon is running"
   docker --version
+  return 0
 }
 
 # Test jq
@@ -232,6 +233,7 @@ test_jq() {
 
   info "jq is available"
   jq --version
+  return 0
 }
 
 # Test rsync
@@ -245,6 +247,7 @@ test_rsync() {
 
   info "rsync is available"
   rsync --version | head -1
+  return 0
 }
 
 # Test docker-dev script syntax
@@ -260,6 +263,7 @@ test_script_syntax() {
   fi
 
   info "docker-dev script syntax is valid"
+  return 0
 }
 
 # Build test container
@@ -300,6 +304,7 @@ build_test_container() {
   fi
 
   info "Supervisor available in image: $(docker run --rm docker-dev-test:latest supervisord --version)"
+  return 0
 }
 
 # Show usage
