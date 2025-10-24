@@ -32,6 +32,7 @@ validate_repo_path() {
 # Source libraries
 source "$(dirname "${BASH_SOURCE[0]}")/lib/config.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/lib/docker-ops.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/extraction.sh"
 
 # Main command dispatcher
 main() {
@@ -123,7 +124,22 @@ cmd_start() {
 }
 
 cmd_extract() {
-  echo "Extracting changes from container"
+  local repo_path=$(validate_repo_path "${1:-.}")
+  local container_id_file="$repo_path/$METADATA_DIR/container-id"
+
+  if [[ ! -f "$container_id_file" ]]; then
+    error "No running container found. Run './bin/docker-dev start' first."
+  fi
+
+  local container_id=$(cat "$container_id_file")
+
+  # Verify container is still running
+  if ! docker ps -q | grep -q "$container_id"; then
+    error "Container is not running: $container_id"
+  fi
+
+  extract_changes "$repo_path" "$container_id"
+  show_extraction_summary "$repo_path"
 }
 
 cmd_stop() {
