@@ -1,0 +1,105 @@
+#!/bin/bash
+set -euo pipefail
+
+# Docker development container factory
+# Usage: ./bin/docker-dev <command> [args]
+
+VERSION="0.1.0"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+METADATA_DIR=".dockerdev"
+
+# Helper functions
+error() {
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+info() {
+  echo "INFO: $*"
+}
+
+validate_repo_path() {
+  local repo_path="${1:-.}"
+  if [[ ! -d "$repo_path" ]]; then
+    error "Repository path does not exist: $repo_path"
+  fi
+  if [[ ! -f "$repo_path/config4Docker.json" ]]; then
+    error "config4Docker.json not found in $repo_path"
+  fi
+  echo "$(cd "$repo_path" && pwd)"
+}
+
+# Main command dispatcher
+main() {
+  local command="${1:-help}"
+
+  case "$command" in
+    start)
+      cmd_start "${2:-.}"
+      ;;
+    extract)
+      cmd_extract
+      ;;
+    stop)
+      cmd_stop
+      ;;
+    status)
+      cmd_status
+      ;;
+    clean)
+      cmd_clean
+      ;;
+    help|--help|-h)
+      cmd_help
+      ;;
+    *)
+      error "Unknown command: $command"
+      ;;
+  esac
+}
+
+cmd_help() {
+  cat <<EOF
+docker-dev v$VERSION - Container-based development environment factory
+
+USAGE:
+  ./bin/docker-dev <command> [args]
+
+COMMANDS:
+  start <repo-path>    Build image and start container (default: current dir)
+  extract              Copy changes from container to repo
+  stop                 Stop running container
+  status               Show container and image status
+  clean                Remove Docker image
+  help                 Show this help message
+
+EXAMPLES:
+  ./bin/docker-dev start
+  ./bin/docker-dev start /path/to/repo
+  ./bin/docker-dev extract
+  ./bin/docker-dev stop
+
+EOF
+}
+
+cmd_start() {
+  echo "Starting container for: $1"
+}
+
+cmd_extract() {
+  echo "Extracting changes from container"
+}
+
+cmd_stop() {
+  echo "Stopping container"
+}
+
+cmd_status() {
+  echo "Container status"
+}
+
+cmd_clean() {
+  echo "Cleaning Docker image"
+}
+
+main "$@"
