@@ -44,7 +44,7 @@ fi
 info "Generating supervisor configuration..."
 python3 /generate-supervisor-config.py \
   /workspace/config4Docker.json \
-  /etc/supervisor/conf.d/services.conf || error "Failed to generate supervisor config"
+  /etc/supervisor/supervisord.conf || error "Failed to generate supervisor config"
 
 info "Starting services via supervisor..."
 

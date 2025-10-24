@@ -43,7 +43,7 @@ COPY templates/generate-supervisor-config.py /generate-supervisor-config.py
 RUN chmod +x /generate-supervisor-config.py
 
 # Copy container entrypoint script (will be created separately)
-COPY entrypoint.sh /entrypoint.sh
+COPY templates/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Default entrypoint
