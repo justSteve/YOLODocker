@@ -18,7 +18,7 @@ error() {
 }
 
 info() {
-  echo "INFO: $*"
+  echo "INFO: $*" >&2
 }
 
 check_prerequisites() {
@@ -194,7 +194,7 @@ Next steps:
   local container_id=$(cat "$container_id_file")
 
   # Verify container is still running
-  if ! docker ps -q | grep -q "$container_id"; then
+  if ! docker ps -q --no-trunc | grep -q "$container_id"; then
     error "Container is not running: $container_id
 
 Next steps:
