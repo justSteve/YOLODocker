@@ -2,6 +2,101 @@
 
 `docker-dev` creates ephemeral, containerized development environments for multi-service projects. It supports projects with Node.js, Python, Go, or any combination thereof.
 
+## Prerequisites and Setup
+
+### System Requirements
+
+`docker-dev` requires:
+- **Docker** - Container runtime (installation varies by OS)
+- **jq** - JSON command-line processor
+- **rsync** - File synchronization tool
+- **bash 4.0+** - Already present on most systems
+
+### Automated Setup
+
+The easiest way to install all prerequisites is to run the setup script:
+
+```bash
+./bin/setup-docker-dev
+```
+
+**What the setup script does:**
+1. Detects your operating system
+2. Installs Docker (if not present)
+3. Installs jq (if not present)
+4. Installs rsync (if not present)
+5. Verifies Docker daemon is running
+6. Builds a test Docker image to verify everything works
+7. Shows next steps
+
+**For different scenarios:**
+
+```bash
+# Skip Docker installation (assume already installed)
+./bin/setup-docker-dev --skip-docker
+
+# Skip building the test image
+./bin/setup-docker-dev --skip-build
+
+# Show help
+./bin/setup-docker-dev --help
+```
+
+### Manual Installation
+
+If you prefer to install prerequisites manually:
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get update
+sudo apt-get install -y docker.io jq rsync
+sudo usermod -aG docker $USER  # Add your user to docker group
+sudo systemctl start docker
+```
+
+**Fedora/RedHat:**
+```bash
+sudo dnf install -y docker jq rsync
+sudo systemctl enable docker
+sudo systemctl start docker
+sudo usermod -aG docker $USER
+```
+
+**macOS (with Homebrew):**
+```bash
+brew install --cask docker  # Docker Desktop
+brew install jq rsync
+# Start Docker Desktop from Applications
+```
+
+**Windows:**
+1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop)
+2. Configure WSL2 backend in Docker Settings
+3. Install jq and rsync in WSL2:
+   ```bash
+   sudo apt-get install -y jq rsync
+   ```
+
+### Verify Installation
+
+After installation, verify everything works:
+
+```bash
+# Check Docker
+docker ps
+
+# Check jq
+jq --version
+
+# Check rsync
+rsync --version
+
+# Check docker-dev script
+./bin/docker-dev help
+```
+
+---
+
 ## Quick Start
 
 ### 1. Add config4Docker.json to Your Repo

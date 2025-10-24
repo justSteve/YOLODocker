@@ -1,0 +1,455 @@
+#!/bin/bash
+set -euo pipefail
+
+# Setup script for docker-dev tool
+# Installs prerequisites and verifies Docker functionality
+
+VERSION="1.0.0"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+COLOR_GREEN='\033[0;32m'
+COLOR_YELLOW='\033[1;33m'
+COLOR_RED='\033[0;31m'
+COLOR_RESET='\033[0m'
+
+# Logging functions
+info() {
+  echo -e "${COLOR_GREEN}✓${COLOR_RESET} $*"
+}
+
+warn() {
+  echo -e "${COLOR_YELLOW}⚠${COLOR_RESET} $*"
+}
+
+error() {
+  echo -e "${COLOR_RED}✗${COLOR_RESET} $*" >&2
+}
+
+section() {
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "$*"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+}
+
+# Detect OS
+detect_os() {
+  if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    if grep -qi ubuntu /etc/os-release 2>/dev/null; then
+      echo "ubuntu"
+    elif grep -qi debian /etc/os-release 2>/dev/null; then
+      echo "debian"
+    elif grep -qi fedora /etc/os-release 2>/dev/null; then
+      echo "fedora"
+    else
+      echo "linux"
+    fi
+  elif [[ "$OSTYPE" == "darwin"* ]]; then
+    echo "macos"
+  elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
+    echo "windows"
+  else
+    echo "unknown"
+  fi
+}
+
+# Check if command exists
+command_exists() {
+  command -v "$1" &> /dev/null
+}
+
+# Install Docker
+install_docker() {
+  local os="$1"
+
+  section "Installing Docker"
+
+  case "$os" in
+    ubuntu|debian)
+      warn "Docker installation requires sudo"
+      echo "Running: sudo apt-get update && sudo apt-get install -y docker.io"
+      sudo apt-get update
+      sudo apt-get install -y docker.io
+      sudo usermod -aG docker "$USER"
+      info "Docker installed. You may need to log out and back in, or run: newgrp docker"
+      ;;
+    fedora)
+      warn "Docker installation requires sudo"
+      echo "Running: sudo dnf install -y docker"
+      sudo dnf install -y docker
+      sudo usermod -aG docker "$USER"
+      info "Docker installed. Starting service..."
+      sudo systemctl enable docker
+      sudo systemctl start docker
+      ;;
+    macos)
+      if command_exists brew; then
+        echo "Installing via Homebrew..."
+        brew install --cask docker
+        info "Docker Desktop installed. Please start it from Applications."
+      else
+        error "Homebrew not found. Install from https://brew.sh"
+        return 1
+      fi
+      ;;
+    windows)
+      error "Windows detected. Install Docker Desktop from: https://www.docker.com/products/docker-desktop"
+      echo "Then configure WSL2 backend in Docker settings"
+      return 1
+      ;;
+    *)
+      error "Unsupported OS. Install Docker from: https://docs.docker.com/get-docker/"
+      return 1
+      ;;
+  esac
+}
+
+# Install jq
+install_jq() {
+  local os="$1"
+
+  section "Installing jq (JSON processor)"
+
+  if command_exists jq; then
+    info "jq already installed: $(jq --version)"
+    return 0
+  fi
+
+  case "$os" in
+    ubuntu|debian)
+      warn "jq installation requires sudo"
+      echo "Running: sudo apt-get install -y jq"
+      sudo apt-get install -y jq
+      ;;
+    fedora)
+      warn "jq installation requires sudo"
+      echo "Running: sudo dnf install -y jq"
+      sudo dnf install -y jq
+      ;;
+    macos)
+      if command_exists brew; then
+        echo "Running: brew install jq"
+        brew install jq
+      else
+        error "Homebrew not found. Install from https://brew.sh"
+        return 1
+      fi
+      ;;
+    *)
+      error "Unsupported OS. Install jq from: https://stedolan.github.io/jq/"
+      return 1
+      ;;
+  esac
+
+  info "jq installed: $(jq --version)"
+}
+
+# Install rsync
+install_rsync() {
+  local os="$1"
+
+  section "Installing rsync (file synchronization)"
+
+  if command_exists rsync; then
+    info "rsync already installed: $(rsync --version | head -1)"
+    return 0
+  fi
+
+  case "$os" in
+    ubuntu|debian)
+      warn "rsync installation requires sudo"
+      echo "Running: sudo apt-get install -y rsync"
+      sudo apt-get install -y rsync
+      ;;
+    fedora)
+      warn "rsync installation requires sudo"
+      echo "Running: sudo dnf install -y rsync"
+      sudo dnf install -y rsync
+      ;;
+    macos)
+      if command_exists brew; then
+        echo "Running: brew install rsync"
+        brew install rsync
+      else
+        error "Homebrew not found. Install from https://brew.sh"
+        return 1
+      fi
+      ;;
+    *)
+      error "Unsupported OS. Install rsync manually."
+      return 1
+      ;;
+  esac
+
+  info "rsync installed"
+}
+
+# Make docker-dev executable
+setup_script() {
+  section "Setting up docker-dev script"
+
+  local script="$SCRIPT_DIR/bin/docker-dev"
+
+  if [[ ! -f "$script" ]]; then
+    error "bin/docker-dev not found at $script"
+    return 1
+  fi
+
+  chmod +x "$script"
+  info "docker-dev script is executable"
+}
+
+# Test Docker daemon
+test_docker() {
+  section "Testing Docker daemon"
+
+  if ! command_exists docker; then
+    error "Docker command not found"
+    return 1
+  fi
+
+  if ! docker ps &>/dev/null; then
+    error "Docker daemon not responding. Is it running?"
+    echo ""
+    echo "Start Docker:"
+    echo "  • Linux: sudo systemctl start docker"
+    echo "  • macOS: Open Docker Desktop application"
+    echo "  • Windows: Start Docker Desktop from Start Menu"
+    return 1
+  fi
+
+  info "Docker daemon is running"
+  docker --version
+}
+
+# Test jq
+test_jq() {
+  section "Testing jq"
+
+  if ! command_exists jq; then
+    error "jq not found"
+    return 1
+  fi
+
+  info "jq is available"
+  jq --version
+}
+
+# Test rsync
+test_rsync() {
+  section "Testing rsync"
+
+  if ! command_exists rsync; then
+    error "rsync not found"
+    return 1
+  fi
+
+  info "rsync is available"
+  rsync --version | head -1
+}
+
+# Test docker-dev script syntax
+test_script_syntax() {
+  section "Testing docker-dev script syntax"
+
+  local script="$SCRIPT_DIR/bin/docker-dev"
+
+  if ! bash -n "$script" 2>/dev/null; then
+    error "Syntax error in $script"
+    bash -n "$script"
+    return 1
+  fi
+
+  info "docker-dev script syntax is valid"
+}
+
+# Build test container
+build_test_container() {
+  section "Building test Docker image"
+
+  if ! docker build -f "$SCRIPT_DIR/templates/Dockerfile.universal" \
+    -t docker-dev-test:latest \
+    "$SCRIPT_DIR" > /dev/null 2>&1; then
+    error "Failed to build test Docker image"
+    echo "Run this command to see details:"
+    echo "  docker build -f $SCRIPT_DIR/templates/Dockerfile.universal -t docker-dev-test:latest $SCRIPT_DIR"
+    return 1
+  fi
+
+  info "Test Docker image built successfully"
+
+  # Verify Node.js in image
+  if ! docker run --rm docker-dev-test:latest node --version &>/dev/null; then
+    error "Node.js not found in test image"
+    return 1
+  fi
+
+  info "Node.js available in image: $(docker run --rm docker-dev-test:latest node --version)"
+
+  # Verify Python in image
+  if ! docker run --rm docker-dev-test:latest python3 --version &>/dev/null; then
+    error "Python not found in test image"
+    return 1
+  fi
+
+  info "Python available in image: $(docker run --rm docker-dev-test:latest python3 --version)"
+
+  # Verify Supervisor in image
+  if ! docker run --rm docker-dev-test:latest supervisord --version &>/dev/null; then
+    error "Supervisor not found in test image"
+    return 1
+  fi
+
+  info "Supervisor available in image: $(docker run --rm docker-dev-test:latest supervisord --version)"
+}
+
+# Show usage
+show_usage() {
+  section "docker-dev Setup Complete!"
+
+  echo ""
+  echo "Prerequisites installed:"
+  echo "  ✓ Docker"
+  echo "  ✓ jq (JSON processor)"
+  echo "  ✓ rsync (file sync)"
+  echo ""
+  echo "Next steps:"
+  echo ""
+  echo "1. Create a test project:"
+  echo "   mkdir ~/my-test-project && cd ~/my-test-project"
+  echo "   git init"
+  echo ""
+  echo "2. Create config4Docker.json:"
+  echo "   cat > config4Docker.json <<'EOF'"
+  echo "   {"
+  echo "     \"services\": {"
+  echo "       \"web\": {"
+  echo "         \"runtime\": \"node\","
+  echo "         \"port\": 3000,"
+  echo "         \"startCommand\": \"node --version && sleep 300\""
+  echo "       }"
+  echo "     }"
+  echo "   }"
+  echo "   EOF"
+  echo ""
+  echo "3. Create package.json:"
+  echo "   echo '{\"name\": \"test\"}' > package.json"
+  echo ""
+  echo "4. Start the container:"
+  echo "   $SCRIPT_DIR/bin/docker-dev start"
+  echo ""
+  echo "5. Inside the container, verify services are running:"
+  echo "   supervisorctl status"
+  echo ""
+  echo "6. Extract changes when done:"
+  echo "   $SCRIPT_DIR/bin/docker-dev extract"
+  echo ""
+  echo "Documentation:"
+  echo "  $SCRIPT_DIR/DOCKER_DEV_USAGE.md"
+  echo ""
+}
+
+# Main setup flow
+main() {
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "docker-dev Setup v$VERSION"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  local os=$(detect_os)
+  echo "Detected OS: $os"
+  echo ""
+
+  # Parse arguments
+  local skip_build=0
+  local skip_docker=0
+
+  for arg in "$@"; do
+    case "$arg" in
+      --skip-build) skip_build=1 ;;
+      --skip-docker) skip_docker=1 ;;
+      --help)
+        echo "Usage: $0 [options]"
+        echo ""
+        echo "Options:"
+        echo "  --skip-build    Skip building test Docker image"
+        echo "  --skip-docker   Skip Docker installation (assume already installed)"
+        echo "  --help          Show this help message"
+        exit 0
+        ;;
+    esac
+  done
+
+  # Install prerequisites
+  if [[ $skip_docker -eq 0 ]]; then
+    if ! command_exists docker; then
+      if ! install_docker "$os"; then
+        error "Failed to install Docker"
+        exit 1
+      fi
+    else
+      info "Docker already installed"
+    fi
+  fi
+
+  if ! install_jq "$os"; then
+    error "Failed to install jq"
+    exit 1
+  fi
+
+  if ! install_rsync "$os"; then
+    error "Failed to install rsync"
+    exit 1
+  fi
+
+  # Setup script
+  if ! setup_script; then
+    error "Failed to setup docker-dev script"
+    exit 1
+  fi
+
+  # Test prerequisites
+  if ! test_docker; then
+    error "Docker not functional. Start Docker daemon and run setup again."
+    exit 1
+  fi
+
+  if ! test_jq; then
+    error "jq not functional"
+    exit 1
+  fi
+
+  if ! test_rsync; then
+    error "rsync not functional"
+    exit 1
+  fi
+
+  if ! test_script_syntax; then
+    error "docker-dev script has syntax errors"
+    exit 1
+  fi
+
+  # Build test image
+  if [[ $skip_build -eq 0 ]]; then
+    if ! build_test_container; then
+      warn "Test Docker image build failed. Continue anyway? (y/n)"
+      read -r response
+      if [[ ! "$response" =~ ^[Yy]$ ]]; then
+        exit 1
+      fi
+    fi
+  else
+    info "Skipping Docker image build (--skip-build)"
+  fi
+
+  # Show usage
+  show_usage
+
+  echo "Setup complete! Happy developing! 🚀"
+  echo ""
+}
+
+# Handle signals
+trap 'error "Setup interrupted"; exit 130' INT TERM
+
+# Run main
+main "$@"
