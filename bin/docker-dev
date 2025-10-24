@@ -29,6 +29,10 @@ validate_repo_path() {
   echo "$(cd "$repo_path" && pwd)"
 }
 
+# Source libraries
+source "$(dirname "${BASH_SOURCE[0]}")/lib/config.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/docker-ops.sh"
+
 # Main command dispatcher
 main() {
   local command="${1:-help}"
@@ -83,8 +87,39 @@ EOF
 }
 
 cmd_start() {
-  local repo_path=$(validate_repo_path "$1")
-  echo "Starting container for: $repo_path"
+  local repo_path=$(validate_repo_path "${1:-.}")
+
+  check_docker
+  check_jq
+
+  info "Loading config from: $repo_path/config4Docker.json"
+  local config=$(load_config "$repo_path/config4Docker.json")
+
+  info "Validating configuration..."
+  validate_config "$config"
+
+  info "Building Docker image..."
+  local image_name=$(generate_image_name)
+  local dockerfile="$REPO_ROOT/templates/Dockerfile.universal"
+
+  build_docker_image "$repo_path" "$dockerfile" "$image_name"
+
+  # Save image name to metadata
+  mkdir -p "$repo_path/$METADATA_DIR"
+  echo "$image_name" > "$repo_path/$METADATA_DIR/image-id"
+
+  info "Starting container..."
+  local container_id=$(run_docker_container "$image_name" "$repo_path")
+
+  # Save container ID to metadata
+  echo "$container_id" > "$repo_path/$METADATA_DIR/container-id"
+
+  info "Attaching to container shell..."
+  attach_to_container "$container_id"
+
+  info "Session ended. Container remains running for extraction."
+  info "Use './bin/docker-dev extract' to copy changes back"
+  info "Use './bin/docker-dev stop' to stop container"
 }
 
 cmd_extract() {
@@ -92,15 +127,44 @@ cmd_extract() {
 }
 
 cmd_stop() {
-  echo "Stopping container"
+  local repo_path=$(validate_repo_path "${1:-.}")
+  local container_id_file="$repo_path/$METADATA_DIR/container-id"
+
+  if [[ ! -f "$container_id_file" ]]; then
+    info "No running container found"
+    return 0
+  fi
+
+  local container_id=$(cat "$container_id_file")
+  stop_docker_container "$container_id"
+  rm -f "$container_id_file"
+  info "Container stopped"
 }
 
 cmd_status() {
-  echo "Container status"
+  local repo_path=$(validate_repo_path "${1:-.}")
+
+  echo "=== Container Status ==="
+  show_container_status
+
+  echo ""
+  echo "=== Image Status ==="
+  show_image_status
 }
 
 cmd_clean() {
-  echo "Cleaning Docker image"
+  local repo_path=$(validate_repo_path "${1:-.}")
+  local image_id_file="$repo_path/$METADATA_DIR/image-id"
+
+  if [[ ! -f "$image_id_file" ]]; then
+    info "No built image found"
+    return 0
+  fi
+
+  local image_id=$(cat "$image_id_file")
+  remove_docker_image "$image_id"
+  rm -f "$image_id_file"
+  info "Image cleaned"
 }
 
 main "$@"
