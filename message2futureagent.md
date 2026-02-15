@@ -10,7 +10,7 @@ Welcome! This document provides context about the `docker-dev` project to help y
 
 ## Architecture at a Glance
 
-```
+..
 bin/docker-dev (main entrypoint)
   ├── lib/config.sh (validate config4Docker.json)
   ├── lib/docker-ops.sh (build, run, stop containers)
